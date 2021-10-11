@@ -13,6 +13,8 @@ type Context struct {
 	request        *http.Request
 	responseWriter http.ResponseWriter
 	ctx            context.Context
+	handlers       []FrameHandler
+	index          int
 
 	isTimeOut bool
 
@@ -27,6 +29,7 @@ func NewContext(w http.ResponseWriter, req *http.Request) *Context {
 		ctx:            req.Context(),
 		isTimeOut:      false,
 		Mutex:          &sync.Mutex{},
+		index:          -1,
 	}
 }
 
@@ -161,4 +164,21 @@ func (ctx *Context) Json(status int, obj interface{}) error {
 	}
 	ctx.responseWriter.Write(byt)
 	return nil
+}
+
+// Next 执行下一个中间
+func (ctx *Context) Next() error {
+	ctx.index++
+	if ctx.index < len(ctx.handlers) {
+		if err := ctx.handlers[ctx.index](ctx); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// SetHandlers 为context设置handlers
+func (ctx *Context) SetHandlers(handlers []FrameHandler) {
+	ctx.handlers = handlers
 }
